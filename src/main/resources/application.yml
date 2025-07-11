@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: account
+  profiles:
+    active: dev
+  config:
+    import: configserver:http://localhost:8888
+  cloud:
+    config:
+      username: admin
+      password: admin@123
