@@ -9,3 +9,13 @@ spring:
     config:
       username: admin
       password: admin@123
+  rabbitmq:
+    host: localhost
+    username: admin
+    password: password
+    port: 5672
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
