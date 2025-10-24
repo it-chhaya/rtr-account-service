@@ -20,7 +20,6 @@ public class DatasourceConfig {
     @Bean
     @RefreshScope
     public DataSource pgDataSource() {
-        log.info("pgDataSource is configured");
         return DataSourceBuilder
                 .create()
                 .driverClassName(databaseProps.getDriver())

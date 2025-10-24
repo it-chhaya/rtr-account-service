@@ -13,10 +13,10 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
         ServiceInfoProps.class
 })
 @SpringBootApplication
-public class AccountServiceApplication {
+public class AccountApp {
 
     public static void main(String[] args) {
-        SpringApplication.run(AccountServiceApplication.class, args);
+        SpringApplication.run(AccountApp.class, args);
     }
 
 }
