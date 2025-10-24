@@ -36,12 +36,15 @@ spring:
         schema.registry.url: http://localhost:8081
         specific.avro.reader: false
         value.subject.name.strategy: io.confluent.kafka.serializers.subject.RecordNameStrategy
-        #spring.json.trusted.packages: "*"
+        spring.json.trusted.packages: "*"
+        spring.json.add.type.headers: false
+        spring.json.value.default.type: kh.edu.cstad.account.domain.EventStore
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         schema.registry.url: http://localhost:8081
+        spring.json.add.type.headers: false
     properties:
       schema.registry.url: http://localhost:8081
 management:

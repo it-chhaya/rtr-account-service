@@ -4,9 +4,13 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.processing.SQL;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Getter
@@ -17,14 +21,14 @@ import java.util.UUID;
 public class EventStore {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
     private UUID eventId;
     private String version;
     private String eventType;
     private String aggregateId;
     private String aggregateType;
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private Instant timestamp = Instant.now();
 
-    private String eventData; // JSON String
+    @JdbcTypeCode(value = SqlTypes.JSON)
+    private Map<String, Object> eventData; // JSON String
 }

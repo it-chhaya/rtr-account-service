@@ -1,6 +1,7 @@
 package kh.edu.cstad.account.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kh.edu.cstad.account.domain.Account;
 import kh.edu.cstad.account.domain.AccountType;
@@ -27,9 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -107,8 +110,8 @@ public class AccountServiceImpl implements AccountService {
         eventStore.setEventType("ACCOUNT_CREATED_EVENT");
         eventStore.setAggregateId(account.getId().toString());
         eventStore.setAggregateType(Account.class.getSimpleName());
-        eventStore.setTimestamp(account.getCreatedAt());
-        eventStore.setEventData(objectMapper.writeValueAsString(accountCreatedEvent));
+        eventStore.setTimestamp(Instant.from(account.getCreatedAt()));
+        eventStore.setEventData(objectMapper.convertValue(accountCreatedEvent, new TypeReference<Map<String, Object>>() {}));
         eventStore.setVersion(String.valueOf(eventStoreRepository.countByAggregateId(account.getId().toString()) + 1));
 
         eventStoreRepository.save(eventStore);
