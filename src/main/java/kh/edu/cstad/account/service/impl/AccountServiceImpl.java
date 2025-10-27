@@ -138,7 +138,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Transactional
     @Override
-    public AccountResponse creditBalance(Long accountId, BigDecimal amount) {
+    public AccountResponse creditBalance(Long accountId, BigDecimal amount, String txnId) {
 
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -158,6 +158,7 @@ public class AccountServiceImpl implements AccountService {
         accountCreditedEvent.setAccountId(account.getId());
         accountCreditedEvent.setAmount(amount);
         accountCreditedEvent.setBalance(account.getBalance());
+        accountCreditedEvent.setTxnId(txnId);
 
         EventStore eventStore = new EventStore();
         eventStore.setId(UUID.randomUUID().toString());
@@ -169,8 +170,15 @@ public class AccountServiceImpl implements AccountService {
         eventStore.setEventData(objectMapper.convertValue(accountCreditedEvent, new TypeReference<Map<String, Object>>() {}));
         eventStore.setVersion(String.valueOf(eventStoreRepository.countByAggregateId(account.getId().toString()) + 1));
 
-        eventStoreRepository.save(eventStore);
-        kafkaTemplate.send("account-events", eventStore.getAggregateId(), eventStore);
+        try {
+            eventStoreRepository.save(eventStore);
+            kafkaTemplate.send("account-events", eventStore.getAggregateId(), eventStore);
+        } catch (Exception e) {
+            log.error("Credit balance failed", e);
+            eventStore.setEventType("AccountCreditFailed");
+            kafkaTemplate.send("account-events", eventStore.getAggregateId(), eventStore);
+        }
+
 
         return accountMapper.toAccountResponse(account);
     }

@@ -13,4 +13,5 @@ public class AccountCreditedEvent {
     private Long accountId;
     private BigDecimal amount;
     private BigDecimal balance;
+    private String txnId;
 }

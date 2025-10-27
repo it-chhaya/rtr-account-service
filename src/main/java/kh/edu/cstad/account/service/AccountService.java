@@ -18,7 +18,7 @@ public interface AccountService {
     AccountResponse createAccount(CreateAccountRequest createAccountRequest) throws JsonProcessingException;
 
 
-    AccountResponse creditBalance(Long accountId, BigDecimal amount);
+    AccountResponse creditBalance(Long accountId, BigDecimal amount, String txnId);
 
 
     /**

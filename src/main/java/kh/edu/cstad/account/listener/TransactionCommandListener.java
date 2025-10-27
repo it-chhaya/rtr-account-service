@@ -5,6 +5,7 @@ import kh.edu.cstad.account.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -16,6 +17,7 @@ import java.util.Map;
 public class TransactionCommandListener {
 
     private final AccountService accountService;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @KafkaListener(topics = "banking.transaction.deposited",
         groupId = "${spring.application.name}")
@@ -41,7 +43,8 @@ public class TransactionCommandListener {
         Map<String, Object> eventData = eventStore.getEventData();
         Long accountId = Long.parseLong(eventData.get("accountId").toString());
         BigDecimal amount = BigDecimal.valueOf((Integer) eventData.get("amount"));
-        accountService.creditBalance(accountId, amount);
+        String txnId = eventStore.getAggregateId();
+        accountService.creditBalance(accountId, amount, txnId);
     }
 
 }
