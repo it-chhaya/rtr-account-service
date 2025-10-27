@@ -5,6 +5,7 @@ import kh.edu.cstad.account.dto.AccountBalanceResponse;
 import kh.edu.cstad.account.dto.AccountResponse;
 import kh.edu.cstad.account.dto.CreateAccountRequest;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface AccountService {
@@ -16,6 +17,8 @@ public interface AccountService {
      */
     AccountResponse createAccount(CreateAccountRequest createAccountRequest) throws JsonProcessingException;
 
+
+    AccountResponse creditBalance(Long accountId, BigDecimal amount);
 
 
     /**

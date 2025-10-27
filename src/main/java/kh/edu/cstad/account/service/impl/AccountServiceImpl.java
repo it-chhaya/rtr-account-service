@@ -11,6 +11,7 @@ import kh.edu.cstad.account.dto.AccountBalanceResponse;
 import kh.edu.cstad.account.dto.AccountResponse;
 import kh.edu.cstad.account.dto.CreateAccountRequest;
 import kh.edu.cstad.account.event.AccountCreatedEvent;
+import kh.edu.cstad.account.event.AccountCreditedEvent;
 import kh.edu.cstad.account.mapper.AccountMapper;
 import kh.edu.cstad.account.repository.AccountRepository;
 import kh.edu.cstad.account.repository.AccountTypeRepository;
@@ -30,6 +31,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -106,11 +108,12 @@ public class AccountServiceImpl implements AccountService {
         accountCreatedEvent.setCreatedAt(account.getCreatedAt());
 
         EventStore eventStore = new EventStore();
+        eventStore.setId(UUID.randomUUID().toString());
         eventStore.setEventId(UUID.randomUUID());
         eventStore.setEventType("ACCOUNT_CREATED_EVENT");
         eventStore.setAggregateId(account.getId().toString());
         eventStore.setAggregateType(Account.class.getSimpleName());
-        eventStore.setTimestamp(Instant.from(account.getCreatedAt()));
+        eventStore.setTimestamp(account.getCreatedAt().toInstant(ZoneOffset.UTC));
         eventStore.setEventData(objectMapper.convertValue(accountCreatedEvent, new TypeReference<Map<String, Object>>() {}));
         eventStore.setVersion(String.valueOf(eventStoreRepository.countByAggregateId(account.getId().toString()) + 1));
 
@@ -130,6 +133,46 @@ public class AccountServiceImpl implements AccountService {
                 .status(accountType.getStatus())
                 .customerId(account.getCustomerId())
                 .build();
+    }
+
+
+    @Transactional
+    @Override
+    public AccountResponse creditBalance(Long accountId, BigDecimal amount) {
+
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Amount cannot be negative");
+        }
+
+        Account account = accountRepository
+                .findById(accountId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+
+        account.setBalance(account.getBalance().add(amount));
+        account.setUpdatedAt(LocalDateTime.now());
+        account.setUpdatedBy("rtr");
+        account = accountRepository.save(account);
+
+        AccountCreditedEvent accountCreditedEvent = new AccountCreditedEvent();
+        accountCreditedEvent.setAccountId(account.getId());
+        accountCreditedEvent.setAmount(amount);
+        accountCreditedEvent.setBalance(account.getBalance());
+
+        EventStore eventStore = new EventStore();
+        eventStore.setId(UUID.randomUUID().toString());
+        eventStore.setEventId(UUID.randomUUID());
+        eventStore.setEventType("AccountCredited");
+        eventStore.setAggregateId(account.getId().toString());
+        eventStore.setAggregateType(Account.class.getSimpleName());
+        eventStore.setTimestamp(account.getCreatedAt().toInstant(ZoneOffset.UTC));
+        eventStore.setEventData(objectMapper.convertValue(accountCreditedEvent, new TypeReference<Map<String, Object>>() {}));
+        eventStore.setVersion(String.valueOf(eventStoreRepository.countByAggregateId(account.getId().toString()) + 1));
+
+        eventStoreRepository.save(eventStore);
+        kafkaTemplate.send("account-events", eventStore.getAggregateId(), eventStore);
+
+        return accountMapper.toAccountResponse(account);
     }
 
 

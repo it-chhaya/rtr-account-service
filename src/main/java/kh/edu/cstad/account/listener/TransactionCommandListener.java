@@ -1,17 +1,21 @@
 package kh.edu.cstad.account.listener;
 
 import kh.edu.cstad.account.domain.EventStore;
+import kh.edu.cstad.account.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class TransactionCommandListener {
+
+    private final AccountService accountService;
 
     @KafkaListener(topics = "banking.transaction.deposited",
         groupId = "${spring.application.name}")
@@ -35,9 +39,9 @@ public class TransactionCommandListener {
 
     private void handleDepositAccount(EventStore eventStore) {
         Map<String, Object> eventData = eventStore.getEventData();
-        log.info("Account ID: {}", eventData.get("accountId"));
-        log.info("Amount: {}", eventData.get("amount"));
-        log.info("Remark: {}", eventData.get("remark"));
+        Long accountId = Long.parseLong(eventData.get("accountId").toString());
+        BigDecimal amount = BigDecimal.valueOf((Integer) eventData.get("amount"));
+        accountService.creditBalance(accountId, amount);
     }
 
 }
