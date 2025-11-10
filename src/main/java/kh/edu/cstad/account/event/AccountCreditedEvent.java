@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 @Setter
 @NoArgsConstructor
 public class AccountCreditedEvent {
-    private Long accountId;
+    private String accountNumber;
     private BigDecimal amount;
     private BigDecimal balance;
     private String txnId;

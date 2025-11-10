@@ -23,12 +23,11 @@ public class EventStore {
     @Id
     private String id;
     private UUID eventId;
-    private String version;
+    private Long version;
     private String eventType;
     private String aggregateId;
     private String aggregateType;
     private Instant timestamp = Instant.now();
 
-    @JdbcTypeCode(value = SqlTypes.JSON)
-    private Map<String, Object> eventData; // JSON String
+    private String eventData; // JSON String
 }

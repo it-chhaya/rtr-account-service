@@ -155,7 +155,7 @@ public class AccountServiceImpl implements AccountService {
         account = accountRepository.save(account);
 
         AccountCreditedEvent accountCreditedEvent = new AccountCreditedEvent();
-        accountCreditedEvent.setAccountId(account.getId());
+        accountCreditedEvent.setAccountNumber(account.getId().toString());
         accountCreditedEvent.setAmount(amount);
         accountCreditedEvent.setBalance(account.getBalance());
         accountCreditedEvent.setTxnId(txnId);
@@ -178,7 +178,6 @@ public class AccountServiceImpl implements AccountService {
             eventStore.setEventType("AccountCreditFailed");
             kafkaTemplate.send("account-events", eventStore.getAggregateId(), eventStore);
         }
-
 
         return accountMapper.toAccountResponse(account);
     }
