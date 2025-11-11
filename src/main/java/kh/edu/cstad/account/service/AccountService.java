@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import kh.edu.cstad.account.dto.AccountBalanceResponse;
 import kh.edu.cstad.account.dto.AccountResponse;
 import kh.edu.cstad.account.dto.CreateAccountRequest;
+import kh.edu.cstad.account.event.AccountCreatedEvent;
+import kh.edu.cstad.account.event.AccountCreditedEvent;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,7 +20,7 @@ public interface AccountService {
     AccountResponse createAccount(CreateAccountRequest createAccountRequest) throws JsonProcessingException;
 
 
-    AccountResponse creditBalance(Long accountId, BigDecimal amount, String txnId);
+    AccountResponse creditBalance(AccountCreditedEvent accountCreditedEvent, Long version);
 
 
     /**

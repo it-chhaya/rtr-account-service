@@ -138,46 +138,17 @@ public class AccountServiceImpl implements AccountService {
 
     @Transactional
     @Override
-    public AccountResponse creditBalance(Long accountId, BigDecimal amount, String txnId) {
+    public AccountResponse creditBalance(AccountCreditedEvent accountCreatedEvent, Long version) {
 
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Amount cannot be negative");
-        }
+        Account account = accountRepository.findByAccountNumber(accountCreatedEvent.getAccountNumber())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + accountCreatedEvent.getAccountNumber()));
 
-        Account account = accountRepository
-                .findById(accountId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
-
-        account.setBalance(account.getBalance().add(amount));
+        account.setBalance(accountCreatedEvent.getBalance());
+        account.setVersion(version);
         account.setUpdatedAt(LocalDateTime.now());
         account.setUpdatedBy("rtr");
+
         account = accountRepository.save(account);
-
-        AccountCreditedEvent accountCreditedEvent = new AccountCreditedEvent();
-        accountCreditedEvent.setAccountNumber(account.getId().toString());
-        accountCreditedEvent.setAmount(amount);
-        accountCreditedEvent.setBalance(account.getBalance());
-        accountCreditedEvent.setTxnId(txnId);
-
-        EventStore eventStore = new EventStore();
-        eventStore.setId(UUID.randomUUID().toString());
-        eventStore.setEventId(UUID.randomUUID());
-        eventStore.setEventType("AccountCredited");
-        eventStore.setAggregateId(account.getId().toString());
-        eventStore.setAggregateType(Account.class.getSimpleName());
-        eventStore.setTimestamp(account.getCreatedAt().toInstant(ZoneOffset.UTC));
-        eventStore.setEventData(objectMapper.convertValue(accountCreditedEvent, new TypeReference<Map<String, Object>>() {}));
-        eventStore.setVersion(String.valueOf(eventStoreRepository.countByAggregateId(account.getId().toString()) + 1));
-
-        try {
-            eventStoreRepository.save(eventStore);
-            kafkaTemplate.send("account-events", eventStore.getAggregateId(), eventStore);
-        } catch (Exception e) {
-            log.error("Credit balance failed", e);
-            eventStore.setEventType("AccountCreditFailed");
-            kafkaTemplate.send("account-events", eventStore.getAggregateId(), eventStore);
-        }
 
         return accountMapper.toAccountResponse(account);
     }

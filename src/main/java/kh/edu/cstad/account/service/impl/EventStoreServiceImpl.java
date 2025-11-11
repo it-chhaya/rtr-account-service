@@ -29,7 +29,7 @@ public class EventStoreServiceImpl implements EventStoreService {
 
     @Transactional
     @Override
-    public void saveEvents(AccountAggregate aggregate) {
+    public void saveEvents(AccountAggregate aggregate, String transactionId) {
 
         List<Object> events = aggregate.getUncommittedEvents();
 
@@ -60,6 +60,7 @@ public class EventStoreServiceImpl implements EventStoreService {
         aggregate.markEventsAsCommitted();
     }
 
+    @Transactional(readOnly = true)
     @Override
     public AccountAggregate loadAggregate(String accountNumber) {
 
@@ -91,6 +92,7 @@ public class EventStoreServiceImpl implements EventStoreService {
         return aggregate;
     }
 
+    @Transactional(readOnly = true)
     @Override
     public List<EventStore> getEventHistory(String accountNumber) {
         return eventStoreRepository.findByAggregateIdOrderByVersionAsc(accountNumber);

@@ -1,6 +1,7 @@
 package kh.edu.cstad.account.listener;
 
 import kh.edu.cstad.account.domain.EventStore;
+import kh.edu.cstad.account.saga.AccountSagaOrchestrator;
 import kh.edu.cstad.account.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +17,7 @@ import java.util.Map;
 @Slf4j
 public class TransactionCommandListener {
 
-    private final AccountService accountService;
+    private final AccountSagaOrchestrator accountSaga;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @KafkaListener(topics = "banking.transaction.deposited",
@@ -29,7 +30,7 @@ public class TransactionCommandListener {
         String eventType = eventStore.getEventType();
 
         switch (eventType) {
-            case "TransactionDeposited" -> handleDepositAccount(eventStore);
+            case "TransactionDeposited" -> accountSaga.handleDepositRequest(null);
             case "TransactionWithdrawn" -> handleWithdrawalAccount(eventStore);
             default -> throw new IllegalStateException("Unknown event type: " + eventType);
         }
@@ -39,12 +40,12 @@ public class TransactionCommandListener {
         log.info("handleWithdrawalAccount");
     }
 
-    private void handleDepositAccount(EventStore eventStore) {
-        Map<String, Object> eventData = eventStore.getEventData();
-        Long accountId = Long.parseLong(eventData.get("accountId").toString());
-        BigDecimal amount = BigDecimal.valueOf((Integer) eventData.get("amount"));
-        String txnId = eventStore.getAggregateId();
-        accountService.creditBalance(accountId, amount, txnId);
-    }
+//    private void handleDepositAccount(EventStore eventStore) {
+//        Map<String, Object> eventData = eventStore.getEventData();
+//        Long accountId = Long.parseLong(eventData.get("accountId").toString());
+//        BigDecimal amount = BigDecimal.valueOf((Integer) eventData.get("amount"));
+//        String txnId = eventStore.getAggregateId();
+//        accountService.creditBalance(accountId, amount, txnId);
+//    }
 
 }

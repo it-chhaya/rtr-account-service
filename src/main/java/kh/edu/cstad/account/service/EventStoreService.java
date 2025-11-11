@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface EventStoreService {
 
-    void saveEvents(AccountAggregate aggregate);
+    void saveEvents(AccountAggregate aggregate, String transactionId);
 
     AccountAggregate loadAggregate(String accountNumber);
 

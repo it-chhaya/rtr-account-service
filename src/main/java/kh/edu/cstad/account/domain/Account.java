@@ -47,4 +47,6 @@ public class Account {
     private String createdBy;
     @Column(nullable = false)
     private String updatedBy;
+
+    private Long version;
 }
