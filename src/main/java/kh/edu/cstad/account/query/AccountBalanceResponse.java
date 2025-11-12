@@ -1,4 +1,4 @@
-package kh.edu.cstad.account.dto;
+package kh.edu.cstad.account.query;
 
 import java.math.BigDecimal;
 

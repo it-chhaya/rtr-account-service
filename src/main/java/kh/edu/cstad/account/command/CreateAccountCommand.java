@@ -1,11 +1,11 @@
-package kh.edu.cstad.account.dto;
+package kh.edu.cstad.account.command;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 
-public record CreateAccountRequest(
+public record CreateAccountCommand(
         @NotNull
         String accountNumber,
         @NotNull

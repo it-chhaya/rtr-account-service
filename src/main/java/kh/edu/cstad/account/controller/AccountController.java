@@ -2,9 +2,9 @@ package kh.edu.cstad.account.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.validation.Valid;
-import kh.edu.cstad.account.dto.AccountBalanceResponse;
-import kh.edu.cstad.account.dto.AccountResponse;
-import kh.edu.cstad.account.dto.CreateAccountRequest;
+import kh.edu.cstad.account.query.AccountBalanceResponse;
+import kh.edu.cstad.account.query.AccountResponse;
+import kh.edu.cstad.account.command.CreateAccountCommand;
 import kh.edu.cstad.account.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,10 +21,10 @@ public class AccountController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
-    public AccountResponse createAccount(
-            @Valid @RequestBody CreateAccountRequest createAccountRequest
+    public String createAccount(
+            @Valid @RequestBody CreateAccountCommand createAccountCommand
     ) throws JsonProcessingException {
-        return accountService.createAccount(createAccountRequest);
+        return accountService.createAccount(createAccountCommand);
     }
 
 

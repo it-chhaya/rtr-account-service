@@ -5,6 +5,7 @@ import kh.edu.cstad.account.event.AccountCreditedEvent;
 import kh.edu.cstad.account.event.DepositCompletedEvent;
 import kh.edu.cstad.account.event.DepositFailedEvent;
 import kh.edu.cstad.account.event.DepositRequestedEvent;
+import kh.edu.cstad.account.service.AccountProjectionService;
 import kh.edu.cstad.account.service.AccountService;
 import kh.edu.cstad.account.service.EventStoreService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class AccountSagaOrchestrator {
     private final EventStoreService eventStoreService;
     private final AccountService accountService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final AccountProjectionService accountProjectionService;
 
     @Transactional
     public void handleDepositRequest(DepositRequestedEvent event) {
@@ -42,7 +44,7 @@ public class AccountSagaOrchestrator {
 
             // Update read model projection
             for (Object domainEvent : aggregate.getUncommittedEvents()) {
-                accountService.creditBalance((AccountCreditedEvent) domainEvent, aggregate.getVersion());
+                accountProjectionService.onProjection(domainEvent);
             }
 
             // Publish success event

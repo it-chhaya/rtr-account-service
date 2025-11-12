@@ -11,11 +11,10 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 public class AccountCreatedEvent {
-    private Long id;
     private String accountNumber;
     private Long customerId;
-    private BigDecimal balance;
+    private BigDecimal initBalance;
     private String accountTypeCode;
-    private String branch;
+    private Long branchId;
     private LocalDateTime createdAt;
 }

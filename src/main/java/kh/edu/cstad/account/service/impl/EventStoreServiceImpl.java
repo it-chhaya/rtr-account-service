@@ -6,6 +6,7 @@ import kh.edu.cstad.account.aggregate.AccountAggregate;
 import kh.edu.cstad.account.domain.Account;
 import kh.edu.cstad.account.domain.EventStore;
 import kh.edu.cstad.account.repository.EventStoreRepository;
+import kh.edu.cstad.account.service.AccountProjectionService;
 import kh.edu.cstad.account.service.EventStoreService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ public class EventStoreServiceImpl implements EventStoreService {
 
     private final ObjectMapper objectMapper;
     private final EventStoreRepository eventStoreRepository;
+    private final AccountProjectionService accountProjectionService;
 
     @Transactional
     @Override
@@ -33,6 +35,7 @@ public class EventStoreServiceImpl implements EventStoreService {
 
         List<Object> events = aggregate.getUncommittedEvents();
 
+        // Persist event sourcing
         for (Object event : events) {
             try {
                 String eventData = objectMapper.writeValueAsString(event);
@@ -55,6 +58,11 @@ public class EventStoreServiceImpl implements EventStoreService {
                 log.error("Failed to serialize event: {}", e.getMessage());
                 throw new RuntimeException("Event serialization failed", e);
             }
+        }
+
+        // Projection on account table = INSERT/UPDATE
+        for (Object event : events) {
+            accountProjectionService.onProjection(event);
         }
 
         aggregate.markEventsAsCommitted();

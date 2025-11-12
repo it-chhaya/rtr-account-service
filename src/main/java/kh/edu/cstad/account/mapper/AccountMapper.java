@@ -1,8 +1,8 @@
 package kh.edu.cstad.account.mapper;
 
 import kh.edu.cstad.account.domain.Account;
-import kh.edu.cstad.account.dto.AccountBalanceResponse;
-import kh.edu.cstad.account.dto.AccountResponse;
+import kh.edu.cstad.account.query.AccountBalanceResponse;
+import kh.edu.cstad.account.query.AccountResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

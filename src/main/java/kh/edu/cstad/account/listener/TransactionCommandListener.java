@@ -1,6 +1,7 @@
 package kh.edu.cstad.account.listener;
 
 import kh.edu.cstad.account.domain.EventStore;
+import kh.edu.cstad.account.event.DepositRequestedEvent;
 import kh.edu.cstad.account.saga.AccountSagaOrchestrator;
 import kh.edu.cstad.account.service.AccountService;
 import lombok.RequiredArgsConstructor;
@@ -18,34 +19,17 @@ import java.util.Map;
 public class TransactionCommandListener {
 
     private final AccountSagaOrchestrator accountSaga;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @KafkaListener(topics = "banking.transaction.deposited",
         groupId = "${spring.application.name}")
-    public void handleTransactionCommand(EventStore eventStore) {
-        log.info("Received transaction command: {}", eventStore.getAggregateType());
-        log.info("Received transaction command: {}", eventStore.getEventType());
-        log.info("Received transaction command: {}", eventStore.getEventData());
-
-        String eventType = eventStore.getEventType();
-
-        switch (eventType) {
-            case "TransactionDeposited" -> accountSaga.handleDepositRequest(null);
-            case "TransactionWithdrawn" -> handleWithdrawalAccount(eventStore);
-            default -> throw new IllegalStateException("Unknown event type: " + eventType);
-        }
+    public void handleDepositRequestedEvent(Map<String, Object> event) {
+        System.out.println("Received deposited event: " + event);
+        DepositRequestedEvent depositRequestedEvent = DepositRequestedEvent.builder()
+                .accountNumber(event.get("accountNumber").toString())
+                .amount(BigDecimal.valueOf((int)event.get("amount")))
+                .transactionId(event.get("txnId").toString())
+                .build();
+        accountSaga.handleDepositRequest(depositRequestedEvent);
     }
-
-    private void handleWithdrawalAccount(EventStore eventStore) {
-        log.info("handleWithdrawalAccount");
-    }
-
-//    private void handleDepositAccount(EventStore eventStore) {
-//        Map<String, Object> eventData = eventStore.getEventData();
-//        Long accountId = Long.parseLong(eventData.get("accountId").toString());
-//        BigDecimal amount = BigDecimal.valueOf((Integer) eventData.get("amount"));
-//        String txnId = eventStore.getAggregateId();
-//        accountService.creditBalance(accountId, amount, txnId);
-//    }
 
 }

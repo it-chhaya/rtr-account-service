@@ -38,7 +38,7 @@ spring:
         value.subject.name.strategy: io.confluent.kafka.serializers.subject.RecordNameStrategy
         spring.json.trusted.packages: "*"
         spring.json.add.type.headers: false
-        spring.json.value.default.type: kh.edu.cstad.account.domain.EventStore
+        spring.json.value.default.type: java.lang.Object
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

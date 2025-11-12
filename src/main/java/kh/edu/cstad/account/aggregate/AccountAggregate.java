@@ -1,5 +1,7 @@
 package kh.edu.cstad.account.aggregate;
 
+import kh.edu.cstad.account.command.CreateAccountCommand;
+import kh.edu.cstad.account.event.AccountCreatedEvent;
 import kh.edu.cstad.account.event.AccountCreditedEvent;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +19,9 @@ public class AccountAggregate {
 
     private String accountNumber;
     private BigDecimal balance;
+    private Long customerId;
+    private Long branchId;
+    private String accountTypeCode;
     private Long version;
 
     private List<Object> uncommittedEvents = new ArrayList<>();
@@ -23,6 +29,32 @@ public class AccountAggregate {
     public AccountAggregate(String accountNumber) {
         this.accountNumber = accountNumber;
         this.version = 0L;
+    }
+
+    public void createAccount(CreateAccountCommand command) {
+
+        // Start validate
+        // Init balance
+        validateInitBalance(command.initBalance());
+
+        // Validate account exists or not
+        if (this.version > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Account number already exists");
+        }
+
+        // Create and publish event
+        AccountCreatedEvent accountCreatedEvent = new AccountCreatedEvent();
+        accountCreatedEvent.setAccountNumber(command.accountNumber());
+        accountCreatedEvent.setCustomerId(command.customerId());
+        accountCreatedEvent.setAccountTypeCode(command.accountTypeCode());
+        accountCreatedEvent.setBranchId(command.branchId());
+        accountCreatedEvent.setInitBalance(command.initBalance());
+        accountCreatedEvent.setCreatedAt(LocalDateTime.now());
+
+        applyEvent(accountCreatedEvent);
+        uncommittedEvents.add(accountCreatedEvent);
+        log.info("Account created: {}", accountCreatedEvent);
     }
 
     public void creditBalance(BigDecimal amount, String transactionId) {
@@ -51,11 +83,28 @@ public class AccountAggregate {
         }
     }
 
+    private void validateInitBalance(BigDecimal initBalance) {
+        if (initBalance == null || initBalance.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Init balance cannot be negative");
+        }
+    }
+
     public void applyEvent(Object event) {
-        if (event instanceof AccountCreditedEvent) {
+        if (event instanceof AccountCreatedEvent) {
+            apply((AccountCreatedEvent) event);
+        } else if (event instanceof AccountCreditedEvent) {
             apply((AccountCreditedEvent) event);
         }
         this.version++;
+    }
+
+    private void apply(AccountCreatedEvent event) {
+        this.accountNumber = event.getAccountNumber();
+        this.balance = event.getInitBalance();
+        this.customerId = event.getCustomerId();
+        this.branchId = event.getBranchId();
+        this.accountTypeCode = event.getAccountTypeCode();
     }
 
     private void apply(AccountCreditedEvent event) {
