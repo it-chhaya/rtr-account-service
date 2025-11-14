@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -28,6 +29,7 @@ public class AccountProjectionService {
     // Define handler
     // 1. handle when account created
     // 1.1. save record into account table
+    @Transactional
     public void onProjection(Object event) {
         if (event instanceof AccountCreatedEvent) {
             handleAccountCreated((AccountCreatedEvent) event);

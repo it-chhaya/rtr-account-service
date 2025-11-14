@@ -27,7 +27,6 @@ public class EventStoreServiceImpl implements EventStoreService {
 
     private final ObjectMapper objectMapper;
     private final EventStoreRepository eventStoreRepository;
-    private final AccountProjectionService accountProjectionService;
 
     @Transactional
     @Override
@@ -50,22 +49,18 @@ public class EventStoreServiceImpl implements EventStoreService {
                 eventStore.setEventData(eventData);
                 eventStore.setVersion(aggregate.getVersion());
 
-
                 eventStoreRepository.save(eventStore);
-                log.info("Event stored: {} for aggregate {}", event.getClass().getSimpleName(),
-                        aggregate.getAccountNumber());
+
+                log.info("Event stored: {} for aggregate {}", event.getClass().getSimpleName(), aggregate.getAccountNumber());
+
+
             } catch (JsonProcessingException e) {
                 log.error("Failed to serialize event: {}", e.getMessage());
                 throw new RuntimeException("Event serialization failed", e);
             }
         }
 
-        // Projection on account table = INSERT/UPDATE
-        for (Object event : events) {
-            accountProjectionService.onProjection(event);
-        }
-
-        aggregate.markEventsAsCommitted();
+        //aggregate.markEventsAsCommitted();
     }
 
     @Transactional(readOnly = true)

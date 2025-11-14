@@ -50,7 +50,7 @@ public class AccountServiceImpl implements AccountService {
     // Call event store for processing event
     @Transactional
     @Override
-    public String createAccount(CreateAccountCommand command) throws JsonProcessingException {
+    public String createAccount(CreateAccountCommand command) {
         log.info("Start creating account: {}", command);
 
         // Create aggregate
@@ -61,7 +61,6 @@ public class AccountServiceImpl implements AccountService {
 
         return command.accountNumber();
     }
-
 
 
     @Override

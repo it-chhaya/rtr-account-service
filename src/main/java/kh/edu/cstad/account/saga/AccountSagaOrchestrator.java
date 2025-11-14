@@ -1,7 +1,6 @@
 package kh.edu.cstad.account.saga;
 
 import kh.edu.cstad.account.aggregate.AccountAggregate;
-import kh.edu.cstad.account.event.AccountCreditedEvent;
 import kh.edu.cstad.account.event.DepositCompletedEvent;
 import kh.edu.cstad.account.event.DepositFailedEvent;
 import kh.edu.cstad.account.event.DepositRequestedEvent;
@@ -13,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 
 @Component
 @Slf4j
@@ -26,8 +27,10 @@ public class AccountSagaOrchestrator {
 
     @Transactional
     public void handleDepositRequest(DepositRequestedEvent event) {
+
+        log.info("Processing deposit request: {}", event);
+
         try {
-            log.info("Processing deposit request: {}", event);
 
             // Load aggregate from event store
             AccountAggregate aggregate = eventStoreService.loadAggregate(event.getAccountNumber());
@@ -47,7 +50,7 @@ public class AccountSagaOrchestrator {
                 accountProjectionService.onProjection(domainEvent);
             }
 
-            // Publish success event
+            //Publish success event
             DepositCompletedEvent completedEvent = DepositCompletedEvent.builder()
                     .transactionId(event.getTransactionId())
                     .accountNumber(event.getAccountNumber())
@@ -57,6 +60,8 @@ public class AccountSagaOrchestrator {
 
             kafkaTemplate.send("deposit-completed", completedEvent);
             log.info("Deposit completed successfully: {}", completedEvent);
+
+            aggregate.markEventsAsCommitted();
 
         } catch (Exception e) {
             log.error("Deposit failed: {}", e.getMessage());
@@ -70,6 +75,7 @@ public class AccountSagaOrchestrator {
 
             kafkaTemplate.send("deposit-failed", failedEvent);
         }
+
     }
 
 }
