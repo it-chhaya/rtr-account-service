@@ -17,6 +17,7 @@ import kh.edu.cstad.account.repository.AccountRepository;
 import kh.edu.cstad.account.repository.AccountTypeRepository;
 import kh.edu.cstad.account.repository.BranchRepository;
 import kh.edu.cstad.account.repository.EventStoreRepository;
+import kh.edu.cstad.account.service.AccountProjectionService;
 import kh.edu.cstad.account.service.AccountService;
 import kh.edu.cstad.account.service.EventStoreService;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,7 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
     private final EventStoreService eventStoreService;
+    private final AccountProjectionService accountProjectionService;
 
 
     // Call event store for processing event
@@ -57,7 +59,13 @@ public class AccountServiceImpl implements AccountService {
         AccountAggregate aggregate = new AccountAggregate(command.accountNumber());
         aggregate.createAccount(command);
 
+        // Persist event sourcing
         eventStoreService.saveEvents(aggregate, aggregate.getAccountNumber());
+
+        // Save account
+        for (Object event : aggregate.getUncommittedEvents()) {
+            accountProjectionService.onProjection(event);
+        }
 
         return command.accountNumber();
     }
