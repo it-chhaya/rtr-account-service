@@ -25,7 +25,7 @@ public class AccountSagaOrchestrator {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final AccountProjectionService accountProjectionService;
 
-    @Transactional
+    @Transactional(rollbackFor = RuntimeException.class)
     public void handleDepositRequest(DepositRequestedEvent event) {
 
         log.info("Processing deposit request: {}", event);
@@ -33,10 +33,10 @@ public class AccountSagaOrchestrator {
         try {
 
             // Load aggregate from event store
-            AccountAggregate aggregate = eventStoreService.loadAggregate(event.getAccountNumber());
+            AccountAggregate aggregate = eventStoreService.loadAggregate(event.getToAccountNumber());
 
             if (aggregate == null) {
-                throw new RuntimeException("Account not found: " + event.getAccountNumber());
+                throw new RuntimeException("Account not found: " + event.getToAccountNumber());
             }
 
             // Execute command
@@ -53,22 +53,26 @@ public class AccountSagaOrchestrator {
             //Publish success event
             DepositCompletedEvent completedEvent = DepositCompletedEvent.builder()
                     .transactionId(event.getTransactionId())
-                    .accountNumber(event.getAccountNumber())
+                    .toAccountNumber(event.getToAccountNumber())
                     .amount(event.getAmount())
                     .newBalance(aggregate.getBalance())
                     .build();
+
+            if (completedEvent.getAmount().compareTo(BigDecimal.valueOf(1000)) > 0) {
+                throw new RuntimeException("Account service failed to handle transaction");
+            }
 
             kafkaTemplate.send("deposit-completed", completedEvent);
             log.info("Deposit completed successfully: {}", completedEvent);
 
             aggregate.markEventsAsCommitted();
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Deposit failed: {}", e.getMessage());
 
             DepositFailedEvent failedEvent = DepositFailedEvent.builder()
                     .transactionId(event.getTransactionId())
-                    .accountNumber(event.getAccountNumber())
+                    .accountNumber(event.getToAccountNumber())
                     .amount(event.getAmount())
                     .reason(e.getMessage())
                     .build();

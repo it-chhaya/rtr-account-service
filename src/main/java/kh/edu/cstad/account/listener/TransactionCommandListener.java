@@ -1,5 +1,7 @@
 package kh.edu.cstad.account.listener;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import kh.edu.cstad.account.domain.EventStore;
 import kh.edu.cstad.account.event.DepositFailedEvent;
 import kh.edu.cstad.account.event.DepositRequestedEvent;
@@ -20,19 +22,28 @@ import java.util.Map;
 public class TransactionCommandListener {
 
     private final AccountSagaOrchestrator accountSaga;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = "banking.transaction.deposited",
         groupId = "${spring.application.name}")
-    public void handleDepositRequestedEvent(Map<String, Object> event) {
+    public void handleDepositRequestedEvent(String event) {
 
         System.out.println("Received deposited event: " + event);
 
-        DepositRequestedEvent depositRequestedEvent = DepositRequestedEvent.builder()
-                .accountNumber(event.get("accountNumber").toString())
-                .amount(BigDecimal.valueOf((int)event.get("amount")))
-                .transactionId(event.get("txnId").toString())
-                .build();
+        DepositRequestedEvent depositRequestedEvent = null;
+        try {
+            depositRequestedEvent = objectMapper.readValue(event, DepositRequestedEvent.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+//
+//        DepositRequestedEvent depositRequestedEvent = DepositRequestedEvent.builder()
+//                .transactionId(event.get("transactionId").toString())
+//                .accountNumber(event.get("toAccountNumber").toString())
+//                .amount(BigDecimal.valueOf((int)event.get("amount")))
+//                .remark(event.get("remark").toString())
+//                .currency(event.get("currency").toString())
+//                .build();
 
         accountSaga.handleDepositRequest(depositRequestedEvent);
     }

@@ -33,6 +33,7 @@ public class EventStoreServiceImpl implements EventStoreService {
     public void saveEvents(AccountAggregate aggregate, String transactionId) {
 
         List<Object> events = aggregate.getUncommittedEvents();
+        log.info("Aggregate event size {}", aggregate.getUncommittedEvents().size());
 
         // Persist event sourcing
         for (Object event : events) {
@@ -100,4 +101,5 @@ public class EventStoreServiceImpl implements EventStoreService {
     public List<EventStore> getEventHistory(String accountNumber) {
         return eventStoreRepository.findByAggregateIdOrderByVersionAsc(accountNumber);
     }
+
 }

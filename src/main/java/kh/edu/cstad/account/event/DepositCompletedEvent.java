@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 @Builder
 public class DepositCompletedEvent {
     private String transactionId;
-    private String accountNumber;
+    private String toAccountNumber;
     private BigDecimal amount;
     private BigDecimal newBalance;
 }
