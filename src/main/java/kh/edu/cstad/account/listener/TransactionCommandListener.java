@@ -23,6 +23,7 @@ public class TransactionCommandListener {
 
     private final AccountSagaOrchestrator accountSaga;
     private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @KafkaListener(topics = "banking.transaction.deposited",
         groupId = "${spring.application.name}")
@@ -36,16 +37,22 @@ public class TransactionCommandListener {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
-//
-//        DepositRequestedEvent depositRequestedEvent = DepositRequestedEvent.builder()
-//                .transactionId(event.get("transactionId").toString())
-//                .accountNumber(event.get("toAccountNumber").toString())
-//                .amount(BigDecimal.valueOf((int)event.get("amount")))
-//                .remark(event.get("remark").toString())
-//                .currency(event.get("currency").toString())
-//                .build();
 
-        accountSaga.handleDepositRequest(depositRequestedEvent);
+
+        try {
+            accountSaga.handleDepositRequest(depositRequestedEvent);
+        } catch (RuntimeException e) {
+            log.error("Deposit failed: {}", e.getMessage());
+
+            DepositFailedEvent failedEvent = DepositFailedEvent.builder()
+                    .transactionId(depositRequestedEvent.getTransactionId())
+                    .accountNumber(depositRequestedEvent.getToAccountNumber())
+                    .amount(depositRequestedEvent.getAmount())
+                    .reason(e.getMessage())
+                    .build();
+
+            kafkaTemplate.send("deposit-failed", failedEvent);
+        }
     }
 
 }

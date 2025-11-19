@@ -21,65 +21,48 @@ import java.math.BigDecimal;
 public class AccountSagaOrchestrator {
 
     private final EventStoreService eventStoreService;
-    private final AccountService accountService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final AccountProjectionService accountProjectionService;
 
-    @Transactional(rollbackFor = RuntimeException.class)
+    @Transactional
     public void handleDepositRequest(DepositRequestedEvent event) {
 
         log.info("Processing deposit request: {}", event);
 
-        try {
+        // Load aggregate from event store
+        AccountAggregate aggregate = eventStoreService.loadAggregate(event.getToAccountNumber());
 
-            // Load aggregate from event store
-            AccountAggregate aggregate = eventStoreService.loadAggregate(event.getToAccountNumber());
-
-            if (aggregate == null) {
-                throw new RuntimeException("Account not found: " + event.getToAccountNumber());
-            }
-
-            // Execute command
-            aggregate.creditBalance(event.getAmount(), event.getTransactionId());
-
-            // Save new events
-            eventStoreService.saveEvents(aggregate, event.getTransactionId());
-
-            // Update read model projection
-            for (Object domainEvent : aggregate.getUncommittedEvents()) {
-                accountProjectionService.onProjection(domainEvent);
-            }
-
-            //Publish success event
-            DepositCompletedEvent completedEvent = DepositCompletedEvent.builder()
-                    .transactionId(event.getTransactionId())
-                    .toAccountNumber(event.getToAccountNumber())
-                    .amount(event.getAmount())
-                    .newBalance(aggregate.getBalance())
-                    .build();
-
-            if (completedEvent.getAmount().compareTo(BigDecimal.valueOf(1000)) > 0) {
-                throw new RuntimeException("Account service failed to handle transaction");
-            }
-
-            kafkaTemplate.send("deposit-completed", completedEvent);
-            log.info("Deposit completed successfully: {}", completedEvent);
-
-            aggregate.markEventsAsCommitted();
-
-        } catch (RuntimeException e) {
-            log.error("Deposit failed: {}", e.getMessage());
-
-            DepositFailedEvent failedEvent = DepositFailedEvent.builder()
-                    .transactionId(event.getTransactionId())
-                    .accountNumber(event.getToAccountNumber())
-                    .amount(event.getAmount())
-                    .reason(e.getMessage())
-                    .build();
-
-            kafkaTemplate.send("deposit-failed", failedEvent);
+        if (aggregate == null) {
+            throw new RuntimeException("Account not found: " + event.getToAccountNumber());
         }
 
+        // Execute command
+        aggregate.creditBalance(event.getAmount(), event.getTransactionId());
+
+        // Save new events
+        eventStoreService.saveEvents(aggregate, event.getTransactionId());
+
+        // Update read model projection
+        for (Object domainEvent : aggregate.getUncommittedEvents()) {
+            accountProjectionService.onProjection(domainEvent);
+        }
+
+        //Publish success event
+        DepositCompletedEvent completedEvent = DepositCompletedEvent.builder()
+                .transactionId(event.getTransactionId())
+                .toAccountNumber(event.getToAccountNumber())
+                .amount(event.getAmount())
+                .newBalance(aggregate.getBalance())
+                .build();
+
+        if (completedEvent.getAmount().compareTo(BigDecimal.valueOf(1000)) > 0) {
+            throw new RuntimeException("Account service failed to handle transaction");
+        }
+
+        kafkaTemplate.send("deposit-completed", completedEvent);
+        log.info("Deposit completed successfully: {}", completedEvent);
+
+        aggregate.markEventsAsCommitted();
     }
 
 }
