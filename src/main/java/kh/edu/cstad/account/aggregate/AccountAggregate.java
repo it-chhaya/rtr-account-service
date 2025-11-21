@@ -1,14 +1,17 @@
 package kh.edu.cstad.account.aggregate;
 
 import kh.edu.cstad.account.command.CreateAccountCommand;
+import kh.edu.cstad.account.command.ReserveMoneyCommand;
 import kh.edu.cstad.account.event.AccountCreatedEvent;
 import kh.edu.cstad.account.event.AccountCreditedEvent;
+import kh.edu.cstad.account.event.MoneyReservedEvent;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +33,26 @@ public class AccountAggregate {
         this.accountNumber = accountNumber;
         this.version = 0L;
     }
+
+
+    public void handle(ReserveMoneyCommand command) {
+        // Valid logic here
+        validateAmount(command.amount());
+
+        BigDecimal newBalance = this.balance.subtract(command.amount());
+
+        MoneyReservedEvent moneyReservedEvent = MoneyReservedEvent.builder()
+                .transactionId(command.transactionId())
+                .accountNumber(command.accountNumber())
+                .amount(command.amount())
+                .balanceAfter(newBalance)
+                .timestamp(Instant.now())
+                .build();
+
+        applyEvent(moneyReservedEvent);
+        this.uncommittedEvents.add(moneyReservedEvent);
+    }
+
 
     public void createAccount(CreateAccountCommand command) {
 
@@ -95,8 +118,14 @@ public class AccountAggregate {
             apply((AccountCreatedEvent) event);
         } else if (event instanceof AccountCreditedEvent) {
             apply((AccountCreditedEvent) event);
+        } else if (event instanceof MoneyReservedEvent moneyReservedEvent) {
+            apply(moneyReservedEvent);
         }
         this.version++;
+    }
+
+    private void apply(MoneyReservedEvent moneyReservedEvent) {
+        this.balance = moneyReservedEvent.getBalanceAfter();
     }
 
     private void apply(AccountCreatedEvent event) {

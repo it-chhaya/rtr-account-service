@@ -1,6 +1,7 @@
 package kh.edu.cstad.account.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import kh.edu.cstad.account.command.ReserveMoneyCommand;
 import kh.edu.cstad.account.query.AccountBalanceResponse;
 import kh.edu.cstad.account.query.AccountResponse;
 import kh.edu.cstad.account.command.CreateAccountCommand;
@@ -9,6 +10,10 @@ import kh.edu.cstad.account.event.AccountCreditedEvent;
 import java.util.List;
 
 public interface AccountService {
+
+
+    String handle(ReserveMoneyCommand command);
+
 
     /**
      * Use to create a new account

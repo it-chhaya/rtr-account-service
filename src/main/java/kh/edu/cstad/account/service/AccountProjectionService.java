@@ -5,6 +5,7 @@ import kh.edu.cstad.account.domain.AccountType;
 import kh.edu.cstad.account.domain.Branch;
 import kh.edu.cstad.account.event.AccountCreatedEvent;
 import kh.edu.cstad.account.event.AccountCreditedEvent;
+import kh.edu.cstad.account.event.MoneyReservedEvent;
 import kh.edu.cstad.account.repository.AccountRepository;
 import kh.edu.cstad.account.repository.AccountTypeRepository;
 import kh.edu.cstad.account.repository.BranchRepository;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 @Slf4j
@@ -35,8 +37,25 @@ public class AccountProjectionService {
             handleAccountCreated((AccountCreatedEvent) event);
         } else if (event instanceof AccountCreditedEvent) {
             handleAccountCredited((AccountCreditedEvent) event);
+        } else if (event instanceof MoneyReservedEvent moneyReservedEvent) {
+            handleMoneyReserved(moneyReservedEvent);
         }
     }
+
+
+    private void handleMoneyReserved(MoneyReservedEvent moneyReservedEvent) {
+        Account account = accountRepository.findByAccountNumber(moneyReservedEvent.getAccountNumber())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + moneyReservedEvent.getAccountNumber()));
+
+        account.setBalance(moneyReservedEvent.getBalanceAfter());
+        account.setVersion(account.getVersion() + 1);
+        account.setUpdatedAt(LocalDateTime.ofInstant(moneyReservedEvent.getTimestamp(), ZoneId.systemDefault()));
+        account.setUpdatedBy("admin");
+
+        accountRepository.save(account);
+        log.info("Reserved money has been saved into read database: {}", moneyReservedEvent.getAccountNumber());
+    }
+
 
     private void handleAccountCreated(AccountCreatedEvent event) {
 

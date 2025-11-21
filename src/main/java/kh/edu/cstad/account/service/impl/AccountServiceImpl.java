@@ -3,6 +3,7 @@ package kh.edu.cstad.account.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kh.edu.cstad.account.aggregate.AccountAggregate;
+import kh.edu.cstad.account.command.ReserveMoneyCommand;
 import kh.edu.cstad.account.domain.Account;
 import kh.edu.cstad.account.domain.AccountType;
 import kh.edu.cstad.account.domain.Branch;
@@ -48,6 +49,35 @@ public class AccountServiceImpl implements AccountService {
     private final EventStoreService eventStoreService;
     private final AccountProjectionService accountProjectionService;
 
+
+    @Transactional
+    @Override
+    public String handle(ReserveMoneyCommand command) {
+        log.info("Received reserve money command: {}", command);
+
+        // Load aggregate from event store
+        AccountAggregate aggregate = eventStoreService.loadAggregate(command.accountNumber());
+
+        if (aggregate == null) {
+            throw new RuntimeException("Account not found: " + command.accountNumber());
+        }
+
+        aggregate.handle(command);
+
+        // Persist event sourcing
+        eventStoreService.saveEvents(aggregate, aggregate.getAccountNumber());
+
+        // Update read model
+        for (Object event : aggregate.getUncommittedEvents()) {
+            accountProjectionService.onProjection(event);
+        }
+
+        if (command.amount().compareTo(BigDecimal.valueOf(5000)) > 0) {
+            throw new RuntimeException("Amount greater than 5000");
+        }
+
+        return command.accountNumber();
+    }
 
     // Call event store for processing event
     @Transactional
