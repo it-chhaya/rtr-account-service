@@ -1,10 +1,10 @@
 package kh.edu.cstad.account.aggregate;
 
+import kh.edu.cstad.account.command.CancelReservationCommand;
 import kh.edu.cstad.account.command.CreateAccountCommand;
+import kh.edu.cstad.account.command.CreditMoneyCommand;
 import kh.edu.cstad.account.command.ReserveMoneyCommand;
-import kh.edu.cstad.account.event.AccountCreatedEvent;
-import kh.edu.cstad.account.event.AccountCreditedEvent;
-import kh.edu.cstad.account.event.MoneyReservedEvent;
+import kh.edu.cstad.account.event.*;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -32,6 +32,47 @@ public class AccountAggregate {
     public AccountAggregate(String accountNumber) {
         this.accountNumber = accountNumber;
         this.version = 0L;
+    }
+
+
+    public void handle(CancelReservationCommand command) {
+
+        // Validate logic here
+        validateAmount(command.amount());
+
+        BigDecimal newBalance = balance.add(command.amount());
+
+        ReservationCancelledEvent reservationCancelledEvent = ReservationCancelledEvent.builder()
+                .transactionId(command.transactionId())
+                .accountNumber(command.accountNumber())
+                .amount(command.amount())
+                .balanceAfter(newBalance)
+                .timestamp(Instant.now())
+                .reason(command.reason())
+                .build();
+
+        this.applyEvent(reservationCancelledEvent);
+        this.uncommittedEvents.add(reservationCancelledEvent);
+    }
+
+
+    public void handle(CreditMoneyCommand command) {
+
+        // Validate logic here
+        validateAmount(command.amount());
+
+        BigDecimal newBalance = this.balance.add(command.amount());
+
+        MoneyCreditedEvent moneyCreditedEvent = MoneyCreditedEvent.builder()
+                .transactionId(command.transactionId())
+                .accountNumber(command.accountNumber())
+                .amount(command.amount())
+                .balanceAfter(newBalance)
+                .timestamp(Instant.now())
+                .build();
+
+        this.applyEvent(moneyCreditedEvent);
+        this.uncommittedEvents.add(moneyCreditedEvent);
     }
 
 
@@ -120,8 +161,20 @@ public class AccountAggregate {
             apply((AccountCreditedEvent) event);
         } else if (event instanceof MoneyReservedEvent moneyReservedEvent) {
             apply(moneyReservedEvent);
+        } else if (event instanceof MoneyCreditedEvent moneyCreditedEvent) {
+            apply(moneyCreditedEvent);
+        } else if (event instanceof ReservationCancelledEvent reservationCancelledEvent) {
+            apply(reservationCancelledEvent);
         }
         this.version++;
+    }
+
+    private void apply(ReservationCancelledEvent reservationCancelledEvent) {
+        this.balance = reservationCancelledEvent.getBalanceAfter();
+    }
+
+    private void apply(MoneyCreditedEvent moneyCreditedEvent) {
+        this.balance = moneyCreditedEvent.getBalanceAfter();
     }
 
     private void apply(MoneyReservedEvent moneyReservedEvent) {

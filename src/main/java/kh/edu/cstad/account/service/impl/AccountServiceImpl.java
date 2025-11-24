@@ -3,6 +3,8 @@ package kh.edu.cstad.account.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kh.edu.cstad.account.aggregate.AccountAggregate;
+import kh.edu.cstad.account.command.CancelReservationCommand;
+import kh.edu.cstad.account.command.CreditMoneyCommand;
 import kh.edu.cstad.account.command.ReserveMoneyCommand;
 import kh.edu.cstad.account.domain.Account;
 import kh.edu.cstad.account.domain.AccountType;
@@ -50,6 +52,60 @@ public class AccountServiceImpl implements AccountService {
     private final AccountProjectionService accountProjectionService;
 
 
+    @Override
+    public String handle(CancelReservationCommand command) {
+        log.info("Received Cancel Reservation Command: {}", command);
+
+        // Load aggregate from event store
+        AccountAggregate aggregate = eventStoreService.loadAggregate(command.accountNumber());
+
+        if (aggregate == null) {
+            throw new RuntimeException("Account not found: " + command.accountNumber());
+        }
+
+        aggregate.handle(command);
+
+        // Persist event sourcing
+        eventStoreService.saveEvents(aggregate, aggregate.getAccountNumber());
+
+        // Update read model
+        for (Object event : aggregate.getUncommittedEvents()) {
+            accountProjectionService.onProjection(event);
+        }
+
+        return command.accountNumber();
+    }
+
+
+    @Override
+    public String handle(CreditMoneyCommand command) {
+        log.info("handle CreditMoneyCommand: {}", command);
+
+        // Load aggregate from event store
+        AccountAggregate aggregate = eventStoreService.loadAggregate(command.accountNumber());
+
+        if (aggregate == null) {
+            throw new RuntimeException("Account not found: " + command.accountNumber());
+        }
+
+        aggregate.handle(command);
+
+        // Persist event sourcing
+        eventStoreService.saveEvents(aggregate, aggregate.getAccountNumber());
+
+        // Update read model
+        for (Object event : aggregate.getUncommittedEvents()) {
+            accountProjectionService.onProjection(event);
+        }
+
+        if (command.amount().compareTo(BigDecimal.valueOf(10000)) > 0) {
+            throw new RuntimeException("Amount greater than 10000");
+        }
+
+        return command.accountNumber();
+    }
+
+
     @Transactional
     @Override
     public String handle(ReserveMoneyCommand command) {
@@ -72,8 +128,8 @@ public class AccountServiceImpl implements AccountService {
             accountProjectionService.onProjection(event);
         }
 
-        if (command.amount().compareTo(BigDecimal.valueOf(5000)) > 0) {
-            throw new RuntimeException("Amount greater than 5000");
+        if (command.amount().compareTo(BigDecimal.valueOf(50000)) > 0) {
+            throw new RuntimeException("Amount greater than 50000");
         }
 
         return command.accountNumber();

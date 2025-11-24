@@ -2,7 +2,10 @@ package kh.edu.cstad.account.saga;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import kh.edu.cstad.account.command.CancelReservationCommand;
+import kh.edu.cstad.account.command.CreditMoneyCommand;
 import kh.edu.cstad.account.command.ReserveMoneyCommand;
+import kh.edu.cstad.account.event.MoneyCreditFailedEvent;
 import kh.edu.cstad.account.event.MoneyReserveFailedEvent;
 import kh.edu.cstad.account.publisher.EventPublisher;
 import kh.edu.cstad.account.service.AccountService;
@@ -53,4 +56,52 @@ public class TransferSagaListener {
         }
     }
 
+
+    @KafkaListener(topics = "credit-money-command", groupId = "${spring.application.name}")
+    public void handleCreditMoneyCommand(ConsumerRecord<String, String> record) {
+        try {
+            CreditMoneyCommand command = objectMapper.readValue(
+                    record.value(),
+                    CreditMoneyCommand.class);
+            accountService.handle(command);
+
+            // Publish succeed event
+            eventPublisher.publishEvent("money-credited-event",
+                    command.transactionId(),
+                    command);
+        } catch (Exception e) {
+            log.error("Credit money failed: {}", e.getMessage());
+
+            MoneyCreditFailedEvent failedEvent = MoneyCreditFailedEvent.builder()
+                    .transactionId(record.key())
+                    .reason(e.getMessage())
+                    .build();
+
+            // Publish failed event
+            eventPublisher.publishEvent("money-credit-failed-event",
+                    failedEvent.getTransactionId(),
+                    failedEvent);
+        }
+    }
+
+
+    @KafkaListener(topics = "cancel-reservation-command", groupId = "${spring.application.name}")
+    public void handleCancelReservationCommand(ConsumerRecord<String, String> record) {
+        log.info("Cancel reservation command: {}", record.key());
+
+        try {
+            CancelReservationCommand cancelReservationCommand = objectMapper.readValue(record.value(),
+                    CancelReservationCommand.class);
+
+            accountService.handle(cancelReservationCommand);
+
+            // Publish succeed event
+            eventPublisher.publishEvent("reservation-cancelled-event",
+                    cancelReservationCommand.transactionId(),
+                    cancelReservationCommand);
+
+        } catch (JsonProcessingException e) {
+            log.error("Failed to cancel reservation", e);
+        }
+    }
 }
