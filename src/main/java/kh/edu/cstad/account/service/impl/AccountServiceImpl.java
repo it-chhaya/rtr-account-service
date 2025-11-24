@@ -52,6 +52,7 @@ public class AccountServiceImpl implements AccountService {
     private final AccountProjectionService accountProjectionService;
 
 
+    @Transactional
     @Override
     public String handle(CancelReservationCommand command) {
         log.info("Received Cancel Reservation Command: {}", command);
@@ -77,6 +78,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
 
+    @Transactional
     @Override
     public String handle(CreditMoneyCommand command) {
         log.info("handle CreditMoneyCommand: {}", command);

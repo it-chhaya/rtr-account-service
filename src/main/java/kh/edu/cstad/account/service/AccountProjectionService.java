@@ -3,10 +3,7 @@ package kh.edu.cstad.account.service;
 import kh.edu.cstad.account.domain.Account;
 import kh.edu.cstad.account.domain.AccountType;
 import kh.edu.cstad.account.domain.Branch;
-import kh.edu.cstad.account.event.AccountCreatedEvent;
-import kh.edu.cstad.account.event.AccountCreditedEvent;
-import kh.edu.cstad.account.event.MoneyCreditedEvent;
-import kh.edu.cstad.account.event.MoneyReservedEvent;
+import kh.edu.cstad.account.event.*;
 import kh.edu.cstad.account.repository.AccountRepository;
 import kh.edu.cstad.account.repository.AccountTypeRepository;
 import kh.edu.cstad.account.repository.BranchRepository;
@@ -42,7 +39,22 @@ public class AccountProjectionService {
             handleMoneyReserved(moneyReservedEvent);
         } else if (event instanceof MoneyCreditedEvent moneyCreditedEvent) {
             handleMoneyCredited(moneyCreditedEvent);
+        } else if (event instanceof ReservationCancelledEvent reservationCancelledEvent) {
+            handleReservationCancelled(reservationCancelledEvent);
         }
+    }
+
+
+    public void handleReservationCancelled(ReservationCancelledEvent reservationCancelledEvent) {
+        Account account = accountRepository.findByAccountNumber(reservationCancelledEvent.getAccountNumber())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + reservationCancelledEvent.getAccountNumber()));
+
+        account.setBalance(reservationCancelledEvent.getBalanceAfter());
+        account.setVersion(account.getVersion() + 1);
+        account.setUpdatedAt(LocalDateTime.ofInstant(reservationCancelledEvent.getTimestamp(), ZoneId.systemDefault()));
+        account.setUpdatedBy("admin");
+
+        accountRepository.save(account);
     }
 
 
