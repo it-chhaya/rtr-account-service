@@ -21,7 +21,6 @@ public interface AccountService {
 
     String handle(ReserveMoneyCommand command);
 
-
     /**
      * Use to create a new account
      * @param createAccountCommand information requested by client

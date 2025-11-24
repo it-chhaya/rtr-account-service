@@ -5,6 +5,7 @@ import kh.edu.cstad.account.domain.AccountType;
 import kh.edu.cstad.account.domain.Branch;
 import kh.edu.cstad.account.event.AccountCreatedEvent;
 import kh.edu.cstad.account.event.AccountCreditedEvent;
+import kh.edu.cstad.account.event.MoneyCreditedEvent;
 import kh.edu.cstad.account.event.MoneyReservedEvent;
 import kh.edu.cstad.account.repository.AccountRepository;
 import kh.edu.cstad.account.repository.AccountTypeRepository;
@@ -39,8 +40,25 @@ public class AccountProjectionService {
             handleAccountCredited((AccountCreditedEvent) event);
         } else if (event instanceof MoneyReservedEvent moneyReservedEvent) {
             handleMoneyReserved(moneyReservedEvent);
+        } else if (event instanceof MoneyCreditedEvent moneyCreditedEvent) {
+            handleMoneyCredited(moneyCreditedEvent);
         }
     }
+
+
+    private void handleMoneyCredited(MoneyCreditedEvent moneyCreditedEvent) {
+        Account account = accountRepository.findByAccountNumber(moneyCreditedEvent.getAccountNumber())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + moneyCreditedEvent.getAccountNumber()));
+
+        account.setBalance(moneyCreditedEvent.getBalanceAfter());
+        account.setVersion(account.getVersion() + 1);
+        account.setUpdatedAt(LocalDateTime.ofInstant(moneyCreditedEvent.getTimestamp(), ZoneId.systemDefault()));
+        account.setUpdatedBy("admin");
+
+        accountRepository.save(account);
+        log.info("Credited money has been saved into read database: {}", moneyCreditedEvent.getAccountNumber());
+    }
+
 
 
     private void handleMoneyReserved(MoneyReservedEvent moneyReservedEvent) {
