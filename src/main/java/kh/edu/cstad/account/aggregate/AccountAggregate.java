@@ -80,6 +80,9 @@ public class AccountAggregate {
         // Valid logic here
         validateAmount(command.amount());
 
+        // Validate insufficient balance
+        validateInsufficientBalance(command.amount());
+
         BigDecimal newBalance = this.balance.subtract(command.amount());
 
         MoneyReservedEvent moneyReservedEvent = MoneyReservedEvent.builder()
@@ -140,10 +143,15 @@ public class AccountAggregate {
         log.info("Deposited {} to account {}. New balance: {}", amount, accountNumber, newBalance);
     }
 
+    private void validateInsufficientBalance(BigDecimal amount) {
+        if (amount.compareTo(this.balance) > 0) {
+            throw new RuntimeException("Insufficient balance");
+        }
+    }
+
     private void validateAmount(BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Amount cannot be negative");
+            throw new RuntimeException("Amount cannot be negative");
         }
     }
 
